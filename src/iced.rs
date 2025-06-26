@@ -225,10 +225,12 @@ impl State {
     }
 
     fn subscription(&self) -> Subscription<Message> {
+        let tick =
+            iced::time::every(iced::time::Duration::from_millis(1000)).map(|_| Message::Tick);
         let sway = Subscription::run(sway::sway).map(Message::Sway);
         let battery = Subscription::run(battery::battery).map(Message::Battery);
         let volume = Subscription::run(volume::volume).map(Message::Volume);
-        Subscription::batch([sway, battery, volume])
+        Subscription::batch([tick, sway, battery, volume])
     }
 
     fn style(&self, theme: &Theme) -> iced::theme::Style {
