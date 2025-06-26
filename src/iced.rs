@@ -6,7 +6,7 @@ use iced::{
 use iced_layershell::{
     Settings, application, reexport::Anchor, settings::LayerShellSettings, to_layer_message,
 };
-use log::warn;
+use log::{debug, warn};
 
 use crate::{
     battery::{self, BatteryInfo, BatteryMessage},
@@ -43,6 +43,7 @@ pub fn run() -> Result<(), iced_layershell::Error> {
 
 #[derive(Default)]
 struct State {
+    clock_hovered: bool,
     workspaces: Vec<WorkspaceInfo>,
     sway_messenger: Option<SwayMessenger>,
     battery: Option<BatteryInfo>,
@@ -54,6 +55,7 @@ struct State {
 #[derive(Clone, Debug)]
 enum Message {
     Tick,
+    ClockHover(bool),
     Sway(SwayMessage),
     SwitchWorkspace(i32),
     Battery(BatteryMessage),
@@ -104,9 +106,11 @@ impl State {
     }
 
     fn clock(&self) -> Element<Message> {
-        let time = Local::now().format("%H:%M");
-        center_y(text(time.to_string()).size(TEXT_SIZE))
-            .padding([0.0, SMALL])
+        let format = if self.clock_hovered { "%c" } else { "%H:%M" };
+        let time = Local::now().format(format);
+        mouse_area(center_y(text(time.to_string()).size(TEXT_SIZE)).padding([0.0, SMALL]))
+            .on_enter(Message::ClockHover(true))
+            .on_exit(Message::ClockHover(false))
             .into()
     }
 
@@ -167,6 +171,10 @@ impl State {
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::Tick => Task::none(),
+            Message::ClockHover(hovered) => {
+                self.clock_hovered = hovered;
+                Task::none()
+            }
             Message::Sway(message) => {
                 match message {
                     SwayMessage::Initialized(sway_messenger) => {
