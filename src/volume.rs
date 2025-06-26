@@ -1,34 +1,9 @@
 use std::process::Command;
 
-use iced::futures::{SinkExt, Stream};
+use log::warn;
 
-use crate::POLL_RATE_MS;
-
-pub fn volume() -> impl Stream<Item = VolumeMessage> {
-    iced::stream::channel(100, async move |mut output| {
-        tokio::task::spawn(async move {
-            let mut interval =
-                tokio::time::interval(std::time::Duration::from_millis(POLL_RATE_MS));
-            let mut old_state = None;
-            loop {
-                let new_state = get_info().expect("Unable to get volume info");
-                if old_state != Some(new_state) {
-                    output
-                        .send(VolumeMessage::Update(new_state))
-                        .await
-                        .expect("Unable to send update");
-
-                    old_state = Some(new_state);
-                }
-                interval.tick().await;
-            }
-        });
-    })
-}
-
-#[derive(Debug, Copy, Clone)]
-pub enum VolumeMessage {
-    Update(VolumeInfo),
+pub async fn volume() -> Option<VolumeInfo> {
+    get_info().ok()
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -54,4 +29,40 @@ fn get_info() -> Result<VolumeInfo, Box<dyn std::error::Error>> {
     let muted = stdout.contains("MUTED");
 
     Ok(VolumeInfo { volume, muted })
+}
+
+pub fn toggle_mute() {
+    if Command::new("wpctl")
+        .arg("set-mute")
+        .arg("@DEFAULT_AUDIO_SINK@")
+        .arg("toggle")
+        .output()
+        .is_err()
+    {
+        warn!("Unable to toggle mute");
+    }
+}
+
+pub fn increase_volume() {
+    let output = Command::new("wpctl")
+        .arg("set-volume")
+        .arg("--limit")
+        .arg("1.0")
+        .arg("@DEFAULT_AUDIO_SINK@")
+        .arg("1%+")
+        .output();
+    if !output.is_ok_and(|output| output.status.success()) {
+        warn!("Unable to increase volume");
+    }
+}
+
+pub fn decrease_volume() {
+    let output = Command::new("wpctl")
+        .arg("set-volume")
+        .arg("@DEFAULT_AUDIO_SINK@")
+        .arg("1%-")
+        .output();
+    if !output.is_ok_and(|output| output.status.success()) {
+        warn!("Unable to decrease volume");
+    }
 }

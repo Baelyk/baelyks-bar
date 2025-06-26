@@ -9,9 +9,10 @@ use iced_layershell::{
 use log::{trace, warn};
 
 use crate::{
+    POLL_RATE_MS,
     battery::{self, BatteryInfo, BatteryMessage},
     sway::SwayMessenger,
-    volume::{VolumeInfo, VolumeMessage},
+    volume::VolumeInfo,
 };
 use crate::{
     sway::{self, SwayMessage, WorkspaceInfo},
@@ -60,7 +61,9 @@ enum Message {
     SwitchWorkspace(i32),
     Battery(BatteryMessage),
     BatteryHover(bool),
-    Volume(VolumeMessage),
+    Volume(Option<VolumeInfo>),
+    VolumeToggleMute,
+    VolumeScroll(iced::mouse::ScrollDelta),
 }
 
 impl State {
@@ -149,9 +152,13 @@ impl State {
         let icon = if info.muted { '' } else { '' };
 
         Some(
-            center_y(text(format!("{} {:>3}%", icon, info.volume)).size(TEXT_SIZE))
-                .padding([0.0, SMALL])
-                .into(),
+            mouse_area(
+                center_y(text(format!("{} {:>3}%", icon, info.volume)).size(TEXT_SIZE))
+                    .padding([0.0, SMALL]),
+            )
+            .on_press(Message::VolumeToggleMute)
+            .on_scroll(Message::VolumeScroll)
+            .into(),
         )
     }
 
@@ -209,13 +216,25 @@ impl State {
                 self.battery_hovered = hovered;
                 Task::none()
             }
-            Message::Volume(message) => {
-                match message {
-                    VolumeMessage::Update(info) => {
-                        self.volume = Some(info);
-                    }
+            Message::Volume(info) => {
+                if self.volume != info {
+                    self.volume = info;
                 }
                 Task::none()
+            }
+            Message::VolumeToggleMute => {
+                volume::toggle_mute();
+                Task::none()
+            }
+            Message::VolumeScroll(delta) => {
+                if let iced::mouse::ScrollDelta::Pixels { x: _, y: delta } = delta {
+                    if delta > 1.0 {
+                        volume::decrease_volume();
+                    } else if delta < -1.0 {
+                        volume::increase_volume();
+                    }
+                }
+                Task::future(volume::volume()).map(Message::Volume)
             }
             _ => {
                 warn!("Unexpected message {:?}", message);
@@ -229,7 +248,11 @@ impl State {
             iced::time::every(iced::time::Duration::from_millis(1000)).map(|_| Message::Tick);
         let sway = Subscription::run(sway::sway).map(Message::Sway);
         let battery = Subscription::run(battery::battery).map(Message::Battery);
-        let volume = Subscription::run(volume::volume).map(Message::Volume);
+        let volume = iced::time::repeat(
+            volume::volume,
+            iced::time::Duration::from_millis(POLL_RATE_MS),
+        )
+        .map(Message::Volume);
         Subscription::batch([tick, sway, battery, volume])
     }
 
