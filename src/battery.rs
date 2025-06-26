@@ -21,11 +21,17 @@ pub fn battery() -> impl Stream<Item = BatteryMessage> {
         tokio::task::spawn(async move {
             let mut interval =
                 tokio::time::interval(std::time::Duration::from_millis(POLL_RATE_MS));
+            let mut old_state = None;
             loop {
-                output
-                    .send(BatteryMessage::Update((&battery).into()))
-                    .await
-                    .expect("Unable to send update");
+                let new_state = (&battery).into();
+                if old_state != Some(new_state) {
+                    output
+                        .send(BatteryMessage::Update(new_state))
+                        .await
+                        .expect("Unable to send update");
+
+                    old_state = Some(new_state);
+                }
                 interval.tick().await;
 
                 if manager.refresh(&mut battery).is_err() {
@@ -42,7 +48,7 @@ pub enum BatteryMessage {
     Update(BatteryInfo),
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct BatteryInfo {
     pub charge: u32,
     pub state: starship_battery::State,

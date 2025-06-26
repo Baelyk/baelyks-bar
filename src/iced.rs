@@ -6,7 +6,7 @@ use iced::{
 use iced_layershell::{
     Settings, application, reexport::Anchor, settings::LayerShellSettings, to_layer_message,
 };
-use log::{debug, warn};
+use log::{trace, warn};
 
 use crate::{
     battery::{self, BatteryInfo, BatteryMessage},
@@ -169,6 +169,7 @@ impl State {
     }
 
     fn update(&mut self, message: Message) -> Task<Message> {
+        trace!("Update {:#?}", message);
         match message {
             Message::Tick => Task::none(),
             Message::ClockHover(hovered) => {

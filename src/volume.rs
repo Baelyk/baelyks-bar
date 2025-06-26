@@ -9,14 +9,17 @@ pub fn volume() -> impl Stream<Item = VolumeMessage> {
         tokio::task::spawn(async move {
             let mut interval =
                 tokio::time::interval(std::time::Duration::from_millis(POLL_RATE_MS));
-
+            let mut old_state = None;
             loop {
-                output
-                    .send(VolumeMessage::Update(
-                        get_info().expect("Unable to get volume info"),
-                    ))
-                    .await
-                    .expect("Unable to send update");
+                let new_state = get_info().expect("Unable to get volume info");
+                if old_state != Some(new_state) {
+                    output
+                        .send(VolumeMessage::Update(new_state))
+                        .await
+                        .expect("Unable to send update");
+
+                    old_state = Some(new_state);
+                }
                 interval.tick().await;
             }
         });
@@ -28,7 +31,7 @@ pub enum VolumeMessage {
     Update(VolumeInfo),
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct VolumeInfo {
     pub volume: u32,
     pub muted: bool,
