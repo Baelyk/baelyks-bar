@@ -69,8 +69,6 @@
 
         shellHook = ''
           echo $(cargo --version)
-
-          exec fish
         '';
       };
     })
