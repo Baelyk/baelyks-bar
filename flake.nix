@@ -44,6 +44,12 @@
           src = ./.;
 
           cargoLock.lockFile = ./Cargo.lock;
+          cargoLock.outputHashes = {
+            "cryoglyph-0.1.0" = "sha256-X7S9jq8wU6g1DDNEzOtP3lKWugDnpopPDBK49iWvD4o=";
+            "dpi-0.1.1" = "sha256-hlVhlQ8MmIbNFNr6BM4edKdZbe+ixnPpKm819zauFLQ=";
+            "iced-0.14.0-dev" = "sha256-GqnvR6N00A8Q42R7UhNdNTrt+AQXYSPFa18ZFNUsPA0=";
+            "iced_exdevtools-0.14.0-dev" = "sha256-Zw3YRoigD1CMh7a707nV/Qkj5INgwPaJpt9fQH9n95A=";
+          };
 
           # For Iced, modified based on Halloy's nixpkg
           buildInputs = dlopenLibraries;
