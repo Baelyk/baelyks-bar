@@ -51,11 +51,16 @@
             "iced_exdevtools-0.14.0-dev" = "sha256-Zw3YRoigD1CMh7a707nV/Qkj5INgwPaJpt9fQH9n95A=";
           };
 
-          # For Iced, modified based on Halloy's nixpkg
+          nativeBuildInputs = with pkgs; [makeWrapper];
+
+          # For Iced, modified based on Halloy's nixpkg, then wrap for runtime deps `sway` and `wpctl`
           buildInputs = dlopenLibraries;
           postFixup = ''
             rpath=$(patchelf --print-rpath $out/bin/${name})
             patchelf --set-rpath "$rpath:${nixpkgs.lib.makeLibraryPath dlopenLibraries}" $out/bin/${name}
+
+            wrapProgram $out/bin/${name} \
+              --suffix PATH : ${nixpkgs.lib.makeBinPath [pkgs.sway pkgs.wireplumber]}
           '';
         };
 
@@ -95,6 +100,20 @@
 
         config = lib.mkIf cfg.enable {
           home.packages = [cfg.package];
+
+          #systemd.user.services.${name} = {
+          #Unit = {
+          #Description = displayname;
+          #};
+
+          #Service = {
+          #ExecStart = "${cfg.package}/bin/${name}";
+          #};
+
+          #Install = {
+          #WantedBy = ["default.target"];
+          #};
+          #};
         };
       };
     });
