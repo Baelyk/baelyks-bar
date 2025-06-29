@@ -2,8 +2,10 @@ use chrono::Local;
 use log::info;
 
 mod battery;
+mod freedesktop;
 mod iced;
 mod sway;
+mod tray;
 mod volume;
 
 const POLL_RATE_MS: u64 = 100;

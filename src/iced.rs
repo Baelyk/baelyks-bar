@@ -6,12 +6,13 @@ use iced::{
 use iced_layershell::{
     Settings, application, reexport::Anchor, settings::LayerShellSettings, to_layer_message,
 };
-use log::{trace, warn};
+use log::{debug, trace, warn};
 
 use crate::{
     POLL_RATE_MS,
     battery::{self, BatteryInfo, BatteryMessage},
     sway::SwayMessenger,
+    tray::{TrayItems, TrayMessage},
     volume::VolumeInfo,
 };
 use crate::{
@@ -50,6 +51,7 @@ struct State {
     battery: Option<BatteryInfo>,
     battery_hovered: bool,
     volume: Option<VolumeInfo>,
+    tray_items: Option<TrayItems>,
 }
 
 #[to_layer_message(multi)]
@@ -64,6 +66,7 @@ enum Message {
     Volume(Option<VolumeInfo>),
     VolumeToggleMute,
     VolumeScroll(iced::mouse::ScrollDelta),
+    Tray(TrayMessage),
 }
 
 impl State {
@@ -111,10 +114,22 @@ impl State {
     fn clock(&self) -> Element<Message> {
         let format = if self.clock_hovered { "%c" } else { "%H:%M" };
         let time = Local::now().format(format);
-        mouse_area(center_y(text(time.to_string()).size(TEXT_SIZE)).padding([0.0, SMALL]))
-            .on_enter(Message::ClockHover(true))
-            .on_exit(Message::ClockHover(false))
-            .into()
+
+        // Red clock when building in debug
+        let style = move |_: &Theme| widget::text::Style {
+            color: if cfg!(debug_assertions) {
+                Some([1.0, 0.0, 0.0].into())
+            } else {
+                None
+            },
+        };
+
+        mouse_area(
+            center_y(text(time.to_string()).size(TEXT_SIZE).style(style)).padding([0.0, SMALL]),
+        )
+        .on_enter(Message::ClockHover(true))
+        .on_exit(Message::ClockHover(false))
+        .into()
     }
 
     fn battery(&self) -> Option<Element<Message>> {
@@ -162,11 +177,35 @@ impl State {
         )
     }
 
+    fn tray(&self) -> Option<Element<Message>> {
+        let Some(items) = &self.tray_items else {
+            return None;
+        };
+
+        Some(
+            center_y(
+                Row::from_iter(items.values().map(|item| {
+                    let icon: Element<Message> =
+                        if item.icon.extension().is_some_and(|ext| ext == "svg") {
+                            widget::svg(item.icon.clone()).into()
+                        } else {
+                            widget::image(item.icon.clone()).into()
+                        };
+
+                    widget::tooltip(icon, text(item.title.clone()), Default::default()).into()
+                }))
+                .height(HEIGHT as f32 / 2.0),
+            )
+            .into(),
+        )
+    }
+
     fn view(&self) -> Element<Message> {
         let left = row![self.workspaces()];
 
         let right = Row::new()
             .spacing(SMALL)
+            .push_maybe(self.tray())
             .push_maybe(self.volume())
             .push_maybe(self.battery())
             .push(self.clock());
@@ -236,6 +275,27 @@ impl State {
                 }
                 Task::future(volume::volume()).map(Message::Volume)
             }
+            Message::Tray(message) => {
+                debug!("TrayMessage: {:#?}", message);
+                match message {
+                    TrayMessage::Initialized(tray_items) => self.tray_items = Some(tray_items),
+                    TrayMessage::Add(dest, item) => {
+                        if let Some(tray_items) = &mut self.tray_items {
+                            tray_items.insert(dest, item);
+                        } else {
+                            warn!("Unable to add tray item to uninitialized tray");
+                        }
+                    }
+                    TrayMessage::Remove(dest) => {
+                        if let Some(tray_items) = &mut self.tray_items {
+                            tray_items.remove(&dest);
+                        } else {
+                            warn!("Unable to remove tray item from uninitialized tray");
+                        }
+                    }
+                }
+                Task::none()
+            }
             _ => {
                 warn!("Unexpected message {:?}", message);
                 Task::none()
@@ -253,6 +313,7 @@ impl State {
             iced::time::Duration::from_millis(POLL_RATE_MS),
         )
         .map(Message::Volume);
+        //let tray = Subscription::run(tray::tray).map(Message::Tray);
         Subscription::batch([tick, sway, battery, volume])
     }
 
