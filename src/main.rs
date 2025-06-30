@@ -5,6 +5,7 @@ mod battery;
 mod freedesktop;
 mod iced;
 mod sway;
+mod system;
 mod tray;
 mod volume;
 

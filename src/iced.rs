@@ -12,6 +12,7 @@ use crate::{
     POLL_RATE_MS,
     battery::{self, BatteryInfo, BatteryMessage},
     sway::SwayMessenger,
+    system::{self, SystemInfo, SystemMessage},
     tray::{TrayItems, TrayMessage},
     volume::VolumeInfo,
 };
@@ -24,6 +25,7 @@ const HEIGHT: u32 = 40;
 const TEXT_SIZE: f32 = 20.0;
 const SMALL: f32 = 12.0;
 const MEDIUM: f32 = 24.0;
+const BIG: f32 = 36.0;
 
 pub fn run() -> Result<(), iced_layershell::Error> {
     application(State::default, State::namespace, State::update, State::view)
@@ -52,6 +54,8 @@ struct State {
     battery_hovered: bool,
     volume: Option<VolumeInfo>,
     tray_items: Option<TrayItems>,
+    system_info: Option<SystemInfo>,
+    system_hovered: bool,
 }
 
 #[to_layer_message(multi)]
@@ -67,6 +71,18 @@ enum Message {
     VolumeToggleMute,
     VolumeScroll(iced::mouse::ScrollDelta),
     Tray(TrayMessage),
+    System(SystemMessage),
+    SystemHover(bool),
+}
+
+fn icon(icon: &str) -> Option<Element<Message>> {
+    let icon = crate::freedesktop::find_icon_path(icon)?;
+    Some(
+        widget::svg(icon)
+            .width(Length::Fixed(BIG))
+            .height(Length::Fixed(BIG))
+            .into(),
+    )
 }
 
 impl State {
@@ -200,12 +216,43 @@ impl State {
         )
     }
 
+    fn system(&self) -> Option<Element<Message>> {
+        let info = self.system_info?;
+
+        let cpu_icon = if info.cpu <= 25.0 {
+            icon("indicator-cpufreq-25")
+        } else if info.cpu <= 50.0 {
+            icon("indicator-cpufreq-50")
+        } else if info.cpu <= 75.0 {
+            icon("indicator-cpufreq-75")
+        } else {
+            icon("indicator-cpufreq-100")
+        }?;
+
+        let row = if self.system_hovered {
+            Row::new().push(center_y(
+                text(format!("{:>2.0}% {:>2.0}%", info.memory, info.cpu)).size(TEXT_SIZE),
+            ))
+        } else {
+            Row::new()
+        }
+        .push(center_y(cpu_icon));
+
+        Some(
+            mouse_area(center_y(row).padding([0.0, SMALL]))
+                .on_enter(Message::SystemHover(true))
+                .on_exit(Message::SystemHover(false))
+                .into(),
+        )
+    }
+
     fn view(&self) -> Element<Message> {
         let left = row![self.workspaces()];
 
         let right = Row::new()
             .spacing(SMALL)
             .push_maybe(self.tray())
+            .push_maybe(self.system())
             .push_maybe(self.volume())
             .push_maybe(self.battery())
             .push(self.clock());
@@ -296,6 +343,16 @@ impl State {
                 }
                 Task::none()
             }
+            Message::System(message) => {
+                match message {
+                    SystemMessage::Update(info) => self.system_info = Some(info),
+                }
+                Task::none()
+            }
+            Message::SystemHover(hovered) => {
+                self.system_hovered = hovered;
+                Task::none()
+            }
             _ => {
                 warn!("Unexpected message {:?}", message);
                 Task::none()
@@ -313,8 +370,9 @@ impl State {
             iced::time::Duration::from_millis(POLL_RATE_MS),
         )
         .map(Message::Volume);
+        let system = Subscription::run(system::system).map(Message::System);
         //let tray = Subscription::run(tray::tray).map(Message::Tray);
-        Subscription::batch([tick, sway, battery, volume])
+        Subscription::batch([tick, sway, battery, volume, system])
     }
 
     fn style(&self, theme: &Theme) -> iced::theme::Style {
