@@ -101,19 +101,20 @@
         config = lib.mkIf cfg.enable {
           home.packages = [cfg.package];
 
-          #systemd.user.services.${name} = {
-          #Unit = {
-          #Description = displayname;
-          #};
+          systemd.user.services.${name} = {
+            Unit = {
+              Description = displayname;
+              After = ["graphical-sessions.target"];
+            };
 
-          #Service = {
-          #ExecStart = "${cfg.package}/bin/${name}";
-          #};
+            Service = {
+              ExecStart = "${cfg.package}/bin/${name}";
+            };
 
-          #Install = {
-          #WantedBy = ["default.target"];
-          #};
-          #};
+            Install = {
+              WantedBy = ["default.target"];
+            };
+          };
         };
       };
     });
