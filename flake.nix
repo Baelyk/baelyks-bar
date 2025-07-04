@@ -49,6 +49,7 @@
             "dpi-0.1.1" = "sha256-hlVhlQ8MmIbNFNr6BM4edKdZbe+ixnPpKm819zauFLQ=";
             "iced-0.14.0-dev" = "sha256-GqnvR6N00A8Q42R7UhNdNTrt+AQXYSPFa18ZFNUsPA0=";
             "iced_exdevtools-0.14.0-dev" = "sha256-Zw3YRoigD1CMh7a707nV/Qkj5INgwPaJpt9fQH9n95A=";
+            "freedesktop-icons-0.4.0" = "sha256-bETYaRkI9TRdRVy1FmrPlbTxsygafTqZ+7e4Q6v4h8w=";
           };
 
           nativeBuildInputs = with pkgs; [makeWrapper];

@@ -16,5 +16,5 @@ tokio = { version = "1", features = ["full"] }
 system-tray = "0.8"
 image = "0.25"
 rand = "0.8"
-freedesktop-icons = "0.2.6"
+freedesktop-icons = { git = "https://github.com/baelyk/freedesktop-icons.git" }
 sysinfo = "0.35"

@@ -219,11 +219,13 @@ impl State {
     fn system(&self) -> Option<Element<Message>> {
         let info = self.system_info?;
 
-        let cpu_icon = if info.cpu <= 25.0 {
+        let cpu_icon = if info.cpu <= 20.0 {
+            icon("indicator-cpufreq")
+        } else if info.cpu <= 40.0 {
             icon("indicator-cpufreq-25")
-        } else if info.cpu <= 50.0 {
+        } else if info.cpu <= 60.0 {
             icon("indicator-cpufreq-50")
-        } else if info.cpu <= 75.0 {
+        } else if info.cpu <= 80.0 {
             icon("indicator-cpufreq-75")
         } else {
             icon("indicator-cpufreq-100")
