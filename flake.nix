@@ -105,7 +105,7 @@
           systemd.user.services.${name} = {
             Unit = {
               Description = displayname;
-              After = ["graphical-sessions.target"];
+              PartOf = ["graphical-session.target"];
             };
 
             Service = {
@@ -113,7 +113,7 @@
             };
 
             Install = {
-              WantedBy = ["default.target"];
+              WantedBy = ["graphical-session.target"];
             };
           };
         };
