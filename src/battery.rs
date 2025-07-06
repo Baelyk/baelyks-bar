@@ -51,8 +51,7 @@ pub enum BatteryMessage {
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct BatteryInfo {
     pub charge: u32,
-    pub state: starship_battery::State,
-    pub char: char,
+    pub icon: &'static str,
 }
 
 impl From<&starship_battery::Battery> for BatteryInfo {
@@ -61,18 +60,39 @@ impl From<&starship_battery::Battery> for BatteryInfo {
         let charge = (battery.state_of_charge().value * 100.0).floor() as u32;
         Self {
             charge,
-            state: battery.state(),
-            char: battery_char(charge, battery.state()),
+            icon: battery_icon(charge, battery.state()),
         }
     }
 }
 
-fn battery_char(charge: u32, state: starship_battery::State) -> char {
+fn battery_icon(charge: u32, state: starship_battery::State) -> &'static str {
     let index = (charge / 10) as usize;
     match state {
-        starship_battery::State::Charging => {
-            ['󰢟', '󰢜', '󰂆', '󰂇', '󰂈', '󰢝', '󰂉', '󰢞', '󰂊', '󰂋', '󰂅'][index]
-        }
-        _ => ['󰂃', '󰁻', '󰁼', '󰁽', '󰁽', '󰁾', '󰁿', '󰂀', '󰂁', '󰂂', '󰁹'][index],
+        starship_battery::State::Charging => [
+            "battery-000-charging",
+            "battery-010-charging",
+            "battery-020-charging",
+            "battery-030-charging",
+            "battery-040-charging",
+            "battery-050-charging",
+            "battery-060-charging",
+            "battery-070-charging",
+            "battery-080-charging",
+            "battery-090-charging",
+            "battery-100-charging",
+        ][index],
+        _ => [
+            "battery-000",
+            "battery-010",
+            "battery-020",
+            "battery-030",
+            "battery-040",
+            "battery-050",
+            "battery-060",
+            "battery-070",
+            "battery-080",
+            "battery-090",
+            "battery-100",
+        ][index],
     }
 }

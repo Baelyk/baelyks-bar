@@ -150,27 +150,19 @@ impl State {
 
     fn battery(&self) -> Option<Element<Message>> {
         let info = self.battery?;
+        let battery_icon = icon(info.icon)?;
 
-        let content = if self.battery_hovered {
-            format!("{} {}%", info.char, info.charge)
-        } else {
-            format!("{}", info.char)
-        };
-
-        let color = move |theme: &Theme| widget::text::Style {
-            color: if info.state == starship_battery::State::Charging
-                || info.state == starship_battery::State::Full
-            {
-                Some(theme.palette().success)
-            } else if info.charge <= 10 {
-                Some(theme.palette().danger)
+        let content = Row::new()
+            .push(center_y(battery_icon))
+            .push_maybe(if self.battery_hovered {
+                Some(center_y(text(format!("{}%", info.charge)).size(TEXT_SIZE)))
             } else {
                 None
-            },
-        };
+            })
+            .spacing(SMALL);
 
         Some(
-            mouse_area(center_y(text(content).style(color).size(TEXT_SIZE)).padding([0.0, SMALL]))
+            mouse_area(center_y(content).padding([0.0, SMALL]))
                 .on_enter(Message::BatteryHover(true))
                 .on_exit(Message::BatteryHover(false))
                 .into(),
