@@ -173,12 +173,15 @@ impl State {
     fn volume(&self) -> Option<Element<Message>> {
         let info = self.volume?;
 
-        let icon = if info.muted { '' } else { '' };
+        let icon = icon(info.icon)?;
 
         Some(
             mouse_area(
-                center_y(text(format!("{} {:>3}%", icon, info.volume)).size(TEXT_SIZE))
-                    .padding([0.0, SMALL]),
+                row![
+                    center_y(icon),
+                    center_y(text(format!("{:>3}%", info.volume)).size(TEXT_SIZE))
+                ]
+                .padding([0.0, SMALL]),
             )
             .on_press(Message::VolumeToggleMute)
             .on_scroll(Message::VolumeScroll)

@@ -9,7 +9,7 @@ pub async fn volume() -> Option<VolumeInfo> {
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct VolumeInfo {
     pub volume: u32,
-    pub muted: bool,
+    pub icon: &'static str,
 }
 
 fn get_info() -> Result<VolumeInfo, Box<dyn std::error::Error>> {
@@ -28,7 +28,9 @@ fn get_info() -> Result<VolumeInfo, Box<dyn std::error::Error>> {
 
     let muted = stdout.contains("MUTED");
 
-    Ok(VolumeInfo { volume, muted })
+    let icon = icon(volume, muted);
+
+    Ok(VolumeInfo { volume, icon })
 }
 
 pub fn toggle_mute() {
@@ -64,5 +66,17 @@ pub fn decrease_volume() {
         .output();
     if !output.is_ok_and(|output| output.status.success()) {
         warn!("Unable to decrease volume");
+    }
+}
+
+fn icon(volume: u32, muted: bool) -> &'static str {
+    if muted {
+        "audio-volume-muted"
+    } else if volume <= 33 {
+        "audio-volume-low"
+    } else if volume <= 66 {
+        "audio-volume-medium"
+    } else {
+        "audio-volume-high"
     }
 }
