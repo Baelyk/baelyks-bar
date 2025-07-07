@@ -24,7 +24,7 @@ pub fn sway() -> impl Stream<Item = SwayMessage> {
         let mut events = swayipc_async::Connection::new()
             .await
             .unwrap()
-            .subscribe([EventType::Workspace])
+            .subscribe([EventType::Workspace, EventType::Input])
             .await
             .unwrap()
             .fuse();
@@ -47,7 +47,21 @@ pub fn sway() -> impl Stream<Item = SwayMessage> {
                                 .send(SwayMessage::Workspaces(workspaces))
                                 .await
                                 .unwrap();
+                        }
+                        Event::Input(event) => {
+                            if let Some(layout) = event.input.xkb_active_layout_name {
+                                let icon = match layout.as_str() {
+                                    "English (US)" => "indicator-keyboard-En",
+                                    "Spanish" => "indicator-keyboard-Es",
+                                    _ => {
+                                        warn!("Unknown keyboard layout {}", layout);
+                                        "indicator-keyboard"
+                                    }
+                                };
+                                let input = InputInfo { icon };
+                                output.send(SwayMessage::Input(input)).await.unwrap();
                             }
+                        }
                         _ => warn!("Unexpected event {:?}", event),
                     }
                 }
@@ -72,6 +86,7 @@ pub fn sway() -> impl Stream<Item = SwayMessage> {
 pub enum SwayMessage {
     Initialized(SwayMessenger),
     Workspaces(Vec<WorkspaceInfo>),
+    Input(InputInfo),
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -129,6 +144,11 @@ async fn workspaces_info(connection: &mut swayipc_async::Connection) -> Vec<Work
     workspaces.push(zero);
 
     workspaces
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct InputInfo {
+    pub icon: &'static str,
 }
 
 #[derive(Debug, Clone)]

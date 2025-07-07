@@ -11,7 +11,7 @@ use log::{debug, trace, warn};
 use crate::{
     POLL_RATE_MS,
     battery::{self, BatteryInfo, BatteryMessage},
-    sway::SwayMessenger,
+    sway::{InputInfo, SwayMessenger},
     system::{self, SystemInfo, SystemMessage},
     tray::{TrayItems, TrayMessage},
     volume::VolumeInfo,
@@ -56,6 +56,7 @@ struct State {
     tray_items: Option<TrayItems>,
     system_info: Option<SystemInfo>,
     system_hovered: bool,
+    input: Option<InputInfo>,
 }
 
 #[to_layer_message(multi)]
@@ -240,6 +241,14 @@ impl State {
         )
     }
 
+    fn input(&self) -> Option<Element<Message>> {
+        Some(
+            center_y(icon(self.input?.icon)?)
+                .padding([0.0, SMALL])
+                .into(),
+        )
+    }
+
     fn view(&self) -> Element<Message> {
         let left = row![self.workspaces()];
 
@@ -247,6 +256,7 @@ impl State {
             .spacing(SMALL)
             .push_maybe(self.tray())
             .push_maybe(self.system())
+            .push_maybe(self.input())
             .push_maybe(self.volume())
             .push_maybe(self.battery())
             .push(self.clock());
@@ -270,6 +280,9 @@ impl State {
                     }
                     SwayMessage::Workspaces(workspaces) => {
                         self.workspaces = workspaces;
+                    }
+                    SwayMessage::Input(input) => {
+                        self.input = Some(input);
                     }
                 }
                 Task::none()
